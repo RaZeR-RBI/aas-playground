@@ -1,11 +1,41 @@
+/*
+-	when a node child is a solid leaf the node child number is zero
+-	two adjacent areas (sharing a plane at opposite sides) share a face
+	this face is a portal between the areas
+-	when an area uses a face from the faceindex with a positive index
+	then the face plane normal points into the area
+-	the face edges are stored counter clockwise using the edgeindex
+-	two adjacent convex areas (sharing a face) only share One face
+	this is a simple result of the areas being convex
+-	the areas can't have a mixture of ground and gap faces
+	other mixtures of faces in one area are allowed
+-	areas with the AREACONTENTS_CLUSTERPORTAL in the settings have
+	the cluster number set to the negative portal number
+-	edge zero is a dummy
+-	face zero is a dummy
+-	area zero is a dummy
+-	node zero is a dummy
+*/
+
 import {
 	readVector3,
-	readPlane
+	readPlane,
+	readEdge,
+	readFace,
+	readArea,
+	readInt32,
+	readAreaSettings,
+	readNode
 } from "./readers";
 
 import {
 	Vector3,
-	Plane
+	Plane,
+	Edge,
+	Face,
+	Area,
+	AreaSettings,
+	Node,
 } from "./aastypes";
 
 interface LumpInfo {
@@ -36,6 +66,13 @@ type LumpReader<T> = (v: DataView, byteOffset: number) => T;
 export default class AASFile {
 	public vertexes: Vector3[] = [];
 	public planes: Plane[] = [];
+	public edges: Edge[] = [];
+	public edgeIndexes: number[] = [];
+	public faces: Face[] = [];
+	public faceIndexes: number[] = [];
+	public areas: Area[] = [];
+	public areaSettings: AreaSettings[] = [];
+	public nodes: Node[] = [];
 
 	private lumpInfo: LumpInfo[] = [];
 
@@ -54,9 +91,13 @@ export default class AASFile {
 		this.lumpInfo = this.getLumpInfo(b);
 		this.vertexes = this.readLump(Lumps.Vertexes, b, 12, readVector3);
 		this.planes = this.readLump(Lumps.Planes, b, 20, readPlane);
-
-		console.log("Vertexes: " + this.vertexes.length);
-		console.log("Planes: " + this.planes.length);
+		this.edges = this.readLump(Lumps.Edges, b, 8, readEdge);
+		this.edgeIndexes = this.readLump(Lumps.EdgeIndex, b, 4, readInt32);
+		this.faces = this.readLump(Lumps.Faces, b, 24, readFace);
+		this.faceIndexes = this.readLump(Lumps.FaceIndex, b, 4, readInt32);
+		this.areas = this.readLump(Lumps.Areas, b, 48, readArea);
+		this.areaSettings = this.readLump(Lumps.AreaSettings, b, 28, readAreaSettings);
+		this.nodes = this.readLump(Lumps.Nodes, b, 12, readNode);
 	}
 
 	readLump<T>(type: Lumps, b: ArrayBuffer, size: number, reader: LumpReader<T>): T[] {
