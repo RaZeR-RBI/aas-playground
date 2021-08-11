@@ -1,7 +1,10 @@
 {
     "compilerOptions": {
         "moduleResolution": "node",
-        "strict": true
+        "strict": true,
+        "downlevelIteration": true
     },
-    "include": ["**/*.ts"]
+    "include": [
+        "**/*.ts"
+    ]
 }
