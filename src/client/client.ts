@@ -1,9 +1,12 @@
 import * as THREE from 'three'
+import { Vector3 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import AASFile from './aasfile';
 import AASInfo from './aasinfo';
+import AASRender from './aasrender';
 
-const scene = new THREE.Scene()
+const scene = new THREE.Scene();
+(<any>window).SCENE = scene;
 
 const fileInput = document.getElementById("file") as HTMLInputElement;
 fileInput.addEventListener("change", onFileLoad);
@@ -18,6 +21,17 @@ function onFileLoad(e: any) {
         (<any>window).AAS = f;
         const info = new AASInfo(f);
         (<any>window).INFO = info;
+        const render = new AASRender(info);
+        (<any>window).RENDER?.removeFromScene(scene);
+        render.addToScene(scene);
+        (<any>window).RENDER = render;
+
+        (<any>scene.children[0]).geometry.computeBoundingBox();
+        const bounds: THREE.Box3 = (<any>scene.children[0]).geometry.boundingBox;
+        const center = bounds.min.lerp(bounds.max, 0.5);
+        camera.lookAt(center);
+        camera.position.set(bounds.max.x, bounds.max.y, bounds.max.z);
+        controls.update();
     };
     reader.readAsArrayBuffer(file);
 }
@@ -33,15 +47,6 @@ document.body.appendChild(renderer.domElement)
 
 const controls = new OrbitControls(camera, renderer.domElement)
 
-const geometry = new THREE.BoxGeometry()
-const material = new THREE.MeshBasicMaterial({
-    color: 0x00ff00,
-    wireframe: true,
-})
-
-const cube = new THREE.Mesh(geometry, material)
-scene.add(cube)
-
 window.addEventListener('resize', onWindowResize, false)
 function onWindowResize() {
     camera.aspect = window.innerWidth / (window.innerHeight - navSize)
@@ -52,10 +57,6 @@ function onWindowResize() {
 
 function animate() {
     requestAnimationFrame(animate)
-
-    // cube.rotation.x += 0.01
-    // cube.rotation.y += 0.01
-
     controls.update()
 
     render()

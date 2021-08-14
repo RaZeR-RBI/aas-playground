@@ -2,7 +2,8 @@
     "compilerOptions": {
         "moduleResolution": "node",
         "strict": true,
-        "downlevelIteration": true
+        "downlevelIteration": true,
+        "target": "ES5"
     },
     "include": [
         "**/*.ts"

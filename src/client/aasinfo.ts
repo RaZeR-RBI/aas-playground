@@ -9,7 +9,7 @@ export interface Connectivity {
 }
 
 export class AASInfo {
-	public file: AASFile;
+	public readonly file: AASFile;
 
 	public groundFaceIds: number[] = [];
 	public portalFaceIds: number[] = [];
@@ -51,6 +51,46 @@ export class AASInfo {
 		const f = this.file;
 		const flags = f.areaSettings[face.frontArea].flags & f.areaSettings[face.backArea].flags;
 		return (flags & AreaFlags.Grounded) != 0;
+	}
+
+	getFaceVertices(faceId: number): [number, number, number][] {
+		if (faceId == 0) return [];
+		const flip = faceId < 0;
+		const f = this.file;
+		const edgeIds = this.getFaceEdgeIds(f.faces[Math.abs(faceId)]);
+		let e = new Map<number, number>();
+		for (let i of edgeIds) {
+			const edge = f.edges[Math.abs(i)];
+			if (i > 0)
+				e.set(edge.v1, edge.v2);
+			else
+				e.set(edge.v2, edge.v1);
+		}
+		let vertexIds: number[] = [];
+		let current = [...e.keys()][0];
+		vertexIds.push(current);
+		while (vertexIds.length < e.size) {
+			current = e.get(current)!;
+			vertexIds.push(current);
+		}
+		const vertices: [number, number, number][] = vertexIds
+			.map((val, i, a) => f.vertexes[val])
+			.map((v, i, a) => [v.x, v.y, v.z]);
+
+		return flip ? vertices.reverse() : vertices;
+	}
+
+	private getEdgeVertices(edgeId: number): [number, number, number][] {
+		const flip = edgeId < 0;
+		const edge = this.file.edges[Math.abs(edgeId)];
+		let v1 = this.file.vertexes[edge.v1];
+		let v2 = this.file.vertexes[edge.v2];
+		if (flip) {
+			const tmp = v1;
+			v1 = v2;
+			v2 = tmp;
+		}
+		return [[v1.x, v1.y, v1.z], [v2.x, v2.y, v2.z]];
 	}
 
 	private getFaceEdgeIds(face: Face): number[] {
