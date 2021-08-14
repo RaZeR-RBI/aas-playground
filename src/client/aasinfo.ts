@@ -3,9 +3,14 @@ import { AreaFlags, Face, FaceFlags } from "./aastypes";
 import * as _ from 'lodash';
 
 export interface Connectivity {
-	frontArea: number,
-	backArea: number,
+	frontArea: number, // from
+	backArea: number, // to
 	faceId: number
+}
+
+export interface ReachabilityInfo {
+	faceIds: number[],
+	reach: Connectivity[]
 }
 
 export class AASInfo {
@@ -16,12 +21,24 @@ export class AASInfo {
 	public liquidAreas: number[] = [];
 
 	// reachabilities
-	public reachWalkFaceIds: number[] = [];
 	public reachWalk: Connectivity[] = [];
+	public reachFall: Connectivity[] = [];
 
 	constructor(f: AASFile) {
 		this.file = f;
 		this.load();
+	}
+
+	get reachWalkFaceIds() {
+		return this.getFaceIdsForConnectivity(this.reachWalk);
+	}
+
+	get reachFallFaceIds() {
+		return this.getFaceIdsForConnectivity(this.reachFall);
+	}
+
+	private getFaceIdsForConnectivity(c: Connectivity[]): number[] {
+		return c.map((val, i, a) => val.faceId);
 	}
 
 	private getAreaFaces(areaId: number): Map<number, Face> {
@@ -77,7 +94,7 @@ export class AASInfo {
 			.map((val, i, a) => f.vertexes[val])
 			.map((v, i, a) => [v.x, v.y, v.z]);
 
-		return flip ? vertices.reverse() : vertices;
+		return !flip ? vertices.reverse() : vertices;
 	}
 
 	getFaceLineSegments(faceId: number): [number, number, number][] {
@@ -140,6 +157,14 @@ export class AASInfo {
 		return hasFront && hasBack;
 	}
 
+	private hasReachFall(face: Face): boolean {
+		if (!this.isPortal(face)) return false;
+		let [front, back] = this.getTouchingFaces(face);
+		const hasFront = [...front.values()].some(this.isGround);
+		const hasBack = [...back.values()].some(this.isGround);
+		return hasFront && !hasBack;
+	}
+
 	private flipIfNeeded(id: number, face: Face): Face {
 		if (id > 0) return face;
 		let result = { ...face };
@@ -166,8 +191,13 @@ export class AASInfo {
 				continue;
 			}
 			const faces = this.getAreaFaces(areaId);
-			for (let [faceId, face] of faces) {
-				const flipped = this.flipIfNeeded(faceId, face);
+			for (let [faceId, _face] of faces) {
+				let face = this.flipIfNeeded(faceId, _face);
+				const connect = {
+					frontArea: face.frontArea,
+					backArea: face.backArea,
+					faceId: faceId
+				};
 				// we are still hydrophobic
 				if (this.hasLiquidOnAnySide(face))
 					return;
@@ -175,14 +205,11 @@ export class AASInfo {
 					this.groundFaceIds.push(faceId);
 				if (this.isPortal(face))
 					this.portalFaceIds.push(faceId);
-				if (this.hasReachWalk(face)) {
-					this.reachWalkFaceIds.push(faceId);
-					this.reachWalk.push({
-						frontArea: flipped.frontArea,
-						backArea: flipped.backArea,
-						faceId: Math.abs(faceId)
-					});
-				}
+
+				if (this.hasReachWalk(face))
+					this.reachWalk.push(connect);
+				if (this.hasReachFall(face))
+					this.reachFall.push(connect);
 			}
 		}
 	}

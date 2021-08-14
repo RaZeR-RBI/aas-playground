@@ -9,7 +9,9 @@ import {
 	MeshLambertMaterial,
 	LineBasicMaterial,
 	EdgesGeometry,
-	LineSegments
+	LineSegments,
+	Object3D,
+	NormalBlending
 } from 'three';
 import AASFile from "./aasfile";
 import AASInfo from "./aasinfo";
@@ -22,6 +24,8 @@ export class AASRender {
 	private readonly groundLines: LineSegments;
 	private readonly reachWalk: Mesh;
 	private readonly reachWalkEdges: LineSegments;
+	private readonly reachFall: Mesh;
+	private readonly reachFallEdges: LineSegments;
 
 	constructor(i: AASInfo) {
 		this.info = i;
@@ -32,14 +36,24 @@ export class AASRender {
 		const reachWalkMat = new MeshLambertMaterial({ transparent: true, color: 0x00FF00, opacity: 0.25 });
 		this.reachWalk = this.getMesh(i.reachWalkFaceIds, reachWalkMat, "reachWalk");
 		this.reachWalkEdges = this.getEdges(i.reachWalkFaceIds, 0x00FF00, "reachWalkEdges");
+
+		const reachFallMat = new MeshLambertMaterial({ transparent: true, color: 0xFF00FF, opacity: 0.25 });
+		this.reachFall = this.getMesh(i.reachFallFaceIds, reachFallMat, "reachFall");
+		this.reachFallEdges = this.getEdges(i.reachFallFaceIds, 0xFF00FF, "reachFallEdges");
 	}
 
 	private addOrRemove(scene: Scene, add: boolean) {
 		const fn = add ? scene.add : scene.remove;
-		fn.apply(scene, [this.groundFaces]);
-		fn.apply(scene, [this.groundLines]);
-		fn.apply(scene, [this.reachWalk]);
-		fn.apply(scene, [this.reachWalkEdges]);
+		const items: Object3D[] = [
+			this.groundFaces,
+			this.groundLines,
+			this.reachWalk,
+			this.reachWalkEdges,
+			this.reachFall,
+			this.reachFallEdges
+		];
+		for (let m of items)
+			fn.apply(scene, [m]);
 	}
 
 	private triangulate(faceId: number): number[] {
