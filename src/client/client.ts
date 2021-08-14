@@ -26,8 +26,7 @@ function onFileLoad(e: any) {
         render.addToScene(scene);
         (<any>window).RENDER = render;
 
-        (<any>scene.children[0]).geometry.computeBoundingBox();
-        const bounds: THREE.Box3 = (<any>scene.children[0]).geometry.boundingBox;
+        const bounds: THREE.Box3 = (<any>scene.children[1]).geometry.boundingBox;
         const center = bounds.min.lerp(bounds.max, 0.5);
         camera.lookAt(center);
         camera.position.set(bounds.max.x, bounds.max.y, bounds.max.z);
@@ -38,11 +37,14 @@ function onFileLoad(e: any) {
 
 const navSize = 32;
 
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / (window.innerHeight - navSize), 0.1, 1000)
-camera.position.z = 2
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / (window.innerHeight - navSize), 1, 10000)
+const light = new THREE.DirectionalLight(0xffffff, 1);
+light.position.set(0, 1, 0);
+scene.add(light);
 
 const renderer = new THREE.WebGLRenderer()
 renderer.setSize(window.innerWidth, window.innerHeight - navSize)
+renderer.setClearColor('#6495ed');
 document.body.appendChild(renderer.domElement)
 
 const controls = new OrbitControls(camera, renderer.domElement)

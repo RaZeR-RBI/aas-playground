@@ -80,6 +80,15 @@ export class AASInfo {
 		return flip ? vertices.reverse() : vertices;
 	}
 
+	getFaceLineSegments(faceId: number): [number, number, number][] {
+		if (faceId == 0) return [];
+		const flip = faceId < 0;
+		const f = this.file;
+		const edgeIds = this.getFaceEdgeIds(f.faces[Math.abs(faceId)]);
+		const vertices = edgeIds.map((id, i, a) => this.getEdgeVertices(id), this);
+		return vertices.reduce((acc, val) => acc.concat(val), []);
+	}
+
 	private getEdgeVertices(edgeId: number): [number, number, number][] {
 		const flip = edgeId < 0;
 		const edge = this.file.edges[Math.abs(edgeId)];
