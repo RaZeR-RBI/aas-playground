@@ -4,6 +4,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import AASFile from './aasfile';
 import AASInfo from './aasinfo';
 import AASRender from './aasrender';
+import { GUI } from 'three/examples/jsm/libs/dat.gui.module';
 
 const scene = new THREE.Scene();
 (<any>window).SCENE = scene;
@@ -25,6 +26,15 @@ function onFileLoad(e: any) {
         (<any>window).RENDER?.removeFromScene(scene);
         render.addToScene(scene);
         (<any>window).RENDER = render;
+        (<any>window).GUI?.destroy();
+        const gui = new GUI();
+        for (let child of scene.children) {
+            if (!child.name) continue;
+            const folder = gui.addFolder(child.name);
+            folder.add(child, 'visible');
+            folder.open();
+        }
+        (<any>window).GUI = gui;
 
         const bounds: THREE.Box3 = (<any>scene.children[1]).geometry.boundingBox;
         const center = bounds.min.lerp(bounds.max, 0.5);
@@ -58,13 +68,13 @@ function onWindowResize() {
 }
 
 function animate() {
-    requestAnimationFrame(animate)
-    controls.update()
+    setTimeout(() => requestAnimationFrame(animate), 1000 / 30);
+    controls.update();
 
-    render()
+    render();
 }
 
 function render() {
-    renderer.render(scene, camera)
+    renderer.render(scene, camera);
 }
 animate()

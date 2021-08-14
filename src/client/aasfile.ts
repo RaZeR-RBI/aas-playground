@@ -77,6 +77,7 @@ export default class AASFile {
 	private lumpInfo: LumpInfo[] = [];
 
 	constructor(b: ArrayBuffer) {
+		var t0 = performance.now();
 		const magic = new Uint8Array(b, 0, 4);
 		if (!this.checkMagic(magic)) {
 			alert("Not an AAS file");
@@ -98,6 +99,8 @@ export default class AASFile {
 		this.areas = this.readLump(Lumps.Areas, b, 48, readArea);
 		this.areaSettings = this.readLump(Lumps.AreaSettings, b, 28, readAreaSettings);
 		this.nodes = this.readLump(Lumps.Nodes, b, 12, readNode);
+		var t1 = performance.now();
+		console.log("AAS file loading took " + (t1 - t0) + " ms");
 	}
 
 	readLump<T>(type: Lumps, b: ArrayBuffer, size: number, reader: LumpReader<T>): T[] {
