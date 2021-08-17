@@ -24,7 +24,7 @@ export class AASRender {
 	private readonly groundFaces: Mesh;
 	private readonly groundEdges: LineSegments;
 	private readonly portalFaces: Mesh;
-	private readonly portalEdges: LineSegments;
+	// private readonly portalEdges: LineSegments;
 	private readonly reachWalk: Mesh;
 	private readonly reachWalkEdges: LineSegments;
 	private readonly reachFall: Mesh;
@@ -40,19 +40,19 @@ export class AASRender {
 		this.groundFaces = this.getMesh(i.groundFaceIds, groundMat, "groundFaces");
 		this.groundEdges = this.getEdges(i.groundFaceIds, 0x0, "groundLines");
 
-		const portalMat = new MeshBasicMaterial({ transparent: true, color: '#FF00FF', opacity: 0.25 });
+		const portalMat = new MeshBasicMaterial({ transparent: true, color: '#FF00FF', opacity: 0.25, depthWrite: false });
 		this.portalFaces = this.getMesh(i.portalFaceIds, portalMat, "portal");
-		this.portalEdges = this.getEdges(i.portalFaceIds, '#FF00FF', "portalEdges");
+		// this.portalEdges = this.getEdges(i.portalFaceIds, '#FF00FF', "portalEdges");
 
-		const reachWalkMat = new MeshBasicMaterial({ transparent: true, color: '#00FF00', opacity: 0.25 });
+		const reachWalkMat = new MeshBasicMaterial({ transparent: true, color: '#00FF00', opacity: 0.25, depthWrite: false });
 		this.reachWalk = this.getMesh(i.reachWalkFaceIds, reachWalkMat, "reachWalk");
 		this.reachWalkEdges = this.getEdges(i.reachWalkFaceIds, '#00FF00', "reachWalkEdges");
 
-		const reachFallMat = new MeshBasicMaterial({ transparent: true, color: '#FF0000', opacity: 0.25 });
+		const reachFallMat = new MeshBasicMaterial({ transparent: true, color: '#FF0000', opacity: 0.25, depthWrite: false });
 		this.reachFall = this.getMesh(i.reachFallFaceIds, reachFallMat, "reachFall");
 		this.reachFallEdges = this.getEdges(i.reachFallFaceIds, '#FF0000', "reachFallEdges");
 
-		const reachStepMat = new MeshBasicMaterial({ transparent: true, color: '#0000FF', opacity: 0.25 });
+		const reachStepMat = new MeshBasicMaterial({ transparent: true, color: '#0000FF', opacity: 0.25, depthWrite: false });
 		this.reachStep = this.getMesh(i.reachStepFaceIds, reachStepMat, "reachStep");
 		this.reachStepEdges = this.getEdges(i.reachStepFaceIds, '#0000FF', "reachStepEdges");
 
@@ -66,7 +66,7 @@ export class AASRender {
 	get invisibleOnLoad(): Object3D[] {
 		return [
 			this.portalFaces,
-			this.portalEdges,
+			// this.portalEdges,
 		];
 	}
 
@@ -104,6 +104,7 @@ export class AASRender {
 	}
 
 	private getMesh(faceIds: number[], mat: Material, name: string | undefined = undefined): Mesh {
+		var t0 = performance.now();
 		const verticesPerFace = faceIds
 			.map((faceId, i, a) => this.triangulate(faceId), this);
 		const vertices = new Float32Array(verticesPerFace
@@ -115,10 +116,13 @@ export class AASRender {
 		geometry.computeVertexNormals();
 		const mesh = new Mesh(geometry, mat);
 		mesh.name = name ?? "";
+		var t1 = performance.now();
+		console.log("getMesh(" + mesh.name + "): " + (t1 - t0) + " ms");
 		return mesh;
 	}
 
 	private getEdges(faceIds: number[], color: number | string, name: string | undefined = undefined): LineSegments {
+		var t0 = performance.now();
 		const vertices = faceIds.map((val, i, a) => this.info.getFaceLineSegments(val), this)
 			.reduce((acc, val) => acc.concat(val), (<[number, number, number][]>[]))
 			.reduce((acc, val) => acc.concat([...val]), (<number[]>[]));
@@ -130,6 +134,8 @@ export class AASRender {
 		const mat = new LineDashedMaterial({ color });
 		const mesh = new LineSegments(geo, mat);
 		mesh.name = name ?? "";
+		var t1 = performance.now();
+		console.log("getEdges(" + mesh.name + "): " + (t1 - t0) + " ms");
 		return mesh;
 	}
 
