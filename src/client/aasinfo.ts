@@ -1,52 +1,25 @@
 import AASFile from "./aasfile";
-import { AreaFlags, Face, FaceFlags } from "./aastypes";
+import { AreaContents, AreaFlags, Face, FaceFlags, Reachability, TravelType } from "./aastypes";
 import * as _ from 'lodash';
-
-export interface Connectivity {
-	frontArea: number, // from
-	backArea: number, // to
-	faceId: number
-}
-
-export interface ReachabilityInfo {
-	faceIds: number[],
-	reach: Connectivity[]
-}
 
 export class AASInfo {
 	public readonly file: AASFile;
 
 	public groundFaceIds: number[] = [];
-	public portalFaceIds: number[] = [];
-	public liquidAreas: number[] = [];
-
-	// reachabilities
-	public reachWalk: Connectivity[] = [];
-	public reachFall: Connectivity[] = [];
-	public reachStep: Connectivity[] = [];
+	public waterFaceIds: number[] = [];
+	public slimeFaceIds: number[] = [];
+	public lavaFaceIds: number[] = [];
 
 	constructor(f: AASFile) {
 		var t0 = performance.now();
 		this.file = f;
 		this.load();
 		var t1 = performance.now();
-		console.log("AAS reach calculation took " + (t1 - t0) + " ms");
+		console.log("AAS geometry loaded in " + (t1 - t0) + " ms");
 	}
 
-	get reachWalkFaceIds() {
-		return this.getFaceIdsForConnectivity(this.reachWalk);
-	}
-
-	get reachFallFaceIds() {
-		return this.getFaceIdsForConnectivity(this.reachFall);
-	}
-
-	get reachStepFaceIds() {
-		return this.getFaceIdsForConnectivity(this.reachStep);
-	}
-
-	private getFaceIdsForConnectivity(c: Connectivity[]): number[] {
-		return c.map((val, i, a) => val.faceId);
+	public getReachabilitiesOfType(t: TravelType): Reachability[] {
+		return this.file.reachabilities.filter((val, i, a) => val.travelType == t);
 	}
 
 	private getAreaFaces(areaId: number): Map<number, Face> {
@@ -64,7 +37,7 @@ export class AASInfo {
 	private hasLiquidOnAnySide(face: Face): boolean {
 		const f = this.file;
 		const flags = f.areaSettings[face.frontArea].flags | f.areaSettings[face.backArea].flags;
-		return (flags & FaceFlags.Liquid) != 0;
+		return (flags & AreaFlags.Liquid) != 0;
 	}
 
 	private isGround(face: Face): boolean {
@@ -247,11 +220,6 @@ export class AASInfo {
 			const modelNum = (contents >> 24) & 0xFF
 			// worldspawn only
 			// if (modelNum != 0) continue;
-			// we are hydrophobic
-			if (flags & AreaFlags.Liquid) {
-				this.liquidAreas.push(areaId);
-				continue;
-			}
 			const faces = this.getAreaFaces(areaId);
 			for (let [faceId, _face] of faces) {
 				let face = this.flipIfNeeded(faceId, _face);
@@ -260,20 +228,19 @@ export class AASInfo {
 					backArea: face.backArea,
 					faceId: faceId
 				};
-				// we are still hydrophobic
-				if (this.hasLiquidOnAnySide(face))
-					return;
-				if (this.isGround(face))
+				if (this.hasLiquidOnAnySide(face) && face.frontArea > 0 && face.backArea > 0) {
+					const contents =
+						f.areaSettings[face.frontArea].contents |
+						f.areaSettings[face.backArea].contents;
+					if (contents & AreaContents.Lava)
+						this.lavaFaceIds.push(faceId);
+					else if (contents & AreaContents.Slime)
+						this.slimeFaceIds.push(faceId);
+					else if (contents & AreaContents.Water)
+						this.waterFaceIds.push(faceId);
+				}
+				else if (this.isGround(face))
 					this.groundFaceIds.push(faceId);
-				if (this.isPortal(face))
-					this.portalFaceIds.push(faceId);
-
-				if (this.hasReachWalk(face))
-					this.reachWalk.push(connect);
-				else if (this.hasReachFall(face))
-					this.reachFall.push(connect);
-				else if (this.hasReachStep(face))
-					this.reachStep.push(connect);
 			}
 		}
 	}

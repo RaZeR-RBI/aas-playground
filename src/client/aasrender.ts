@@ -19,22 +19,18 @@ import AASFile from "./aasfile";
 import AASInfo from "./aasinfo";
 import * as earcut from 'earcut';
 import { TravelType } from './aastypes';
+import _ = require('lodash');
 
 export class AASRender {
 	public readonly info: AASInfo;
 
 	private readonly groundFaces: Mesh;
 	private readonly groundEdges: LineSegments;
-	private readonly portalFaces: Mesh;
-	// private readonly portalEdges: LineSegments;
-	private readonly reachWalk: Mesh;
-	private readonly reachWalkEdges: LineSegments;
-	private readonly reachFall: Mesh;
-	private readonly reachFallEdges: LineSegments;
-	private readonly reachStep: Mesh;
-	private readonly reachStepEdges: LineSegments;
+	private readonly reachabilities: LineSegments[];
 
-	private readonly reachabilities: LineSegments;
+	private readonly waterFaces: Mesh;
+	private readonly slimeFaces: Mesh;
+	private readonly lavaFaces: Mesh;
 
 	constructor(i: AASInfo) {
 		const t0 = performance.now();
@@ -44,42 +40,17 @@ export class AASRender {
 		this.groundFaces = this.getMesh(i.groundFaceIds, groundMat, "groundFaces");
 		this.groundEdges = this.getEdges(i.groundFaceIds, 0x0, "groundLines");
 
-		const portalMat = new MeshBasicMaterial({ transparent: true, color: '#FF00FF', opacity: 0.25, depthWrite: false });
-		this.portalFaces = this.getMesh(i.portalFaceIds, portalMat, "portal");
-		// this.portalEdges = this.getEdges(i.portalFaceIds, '#FF00FF', "portalEdges");
-
-		const reachWalkMat = new MeshBasicMaterial({ transparent: true, color: '#00FF00', opacity: 0.25, depthWrite: false });
-		this.reachWalk = this.getMesh(i.reachWalkFaceIds, reachWalkMat, "reachWalk");
-		this.reachWalkEdges = this.getEdges(i.reachWalkFaceIds, '#00FF00', "reachWalkEdges");
-
-		const reachFallMat = new MeshBasicMaterial({ transparent: true, color: '#FF0000', opacity: 0.25, depthWrite: false });
-		this.reachFall = this.getMesh(i.reachFallFaceIds, reachFallMat, "reachFall");
-		this.reachFallEdges = this.getEdges(i.reachFallFaceIds, '#FF0000', "reachFallEdges");
-
-		const reachStepMat = new MeshBasicMaterial({ transparent: true, color: '#0000FF', opacity: 0.25, depthWrite: false });
-		this.reachStep = this.getMesh(i.reachStepFaceIds, reachStepMat, "reachStep");
-		this.reachStepEdges = this.getEdges(i.reachStepFaceIds, '#0000FF', "reachStepEdges");
+		const waterMat = new MeshBasicMaterial({ color: 0x0000CC, depthWrite: false, opacity: 0.2, transparent: true });
+		this.waterFaces = this.getMesh(i.waterFaceIds, waterMat, "waterFaces");
+		const slimeMat = new MeshBasicMaterial({ color: 0x008822, depthWrite: false, opacity: 0.2, transparent: true });
+		this.slimeFaces = this.getMesh(i.slimeFaceIds, slimeMat, "slimeFaces");
+		const lavaMat = new MeshBasicMaterial({ color: 0xFF2200, depthWrite: false, opacity: 0.2, transparent: true });
+		this.lavaFaces = this.getMesh(i.lavaFaceIds, lavaMat, "lavaFaces");
 
 		this.reachabilities = this.getReachabilityGraph();
 
-		for (let obj of this.invisibleOnLoad)
-			obj.visible = false;
-
 		const t1 = performance.now();
 		console.log("AAS preview took " + (t1 - t0) + " ms");
-	}
-
-	get invisibleOnLoad(): Object3D[] {
-		return [
-			this.portalFaces,
-			// this.portalEdges,
-			this.reachWalk,
-			this.reachWalkEdges,
-			this.reachFall,
-			this.reachFallEdges,
-			this.reachStep,
-			this.reachStepEdges,
-		];
 	}
 
 	private addOrRemove(scene: Scene, add: boolean) {
@@ -87,8 +58,10 @@ export class AASRender {
 		const items: Object3D[] = [
 			this.groundFaces,
 			this.groundEdges,
-			this.reachabilities,
-			...this.invisibleOnLoad
+			this.waterFaces,
+			this.slimeFaces,
+			this.lavaFaces,
+			...this.reachabilities
 		];
 		for (let m of items)
 			fn.apply(scene, [m]);
@@ -149,39 +122,73 @@ export class AASRender {
 	private getColorFor(r: TravelType): Color | null {
 		switch (r) {
 			case TravelType.Walk:
-				return new Color(0x00FF00);
+				return new Color(0xFF0000);
 			case TravelType.Crouch:
-				return new Color(0x00AA00);
+				return new Color(0x00FF00);
 			case TravelType.BarrierJump:
-				return new Color(0xFF00FF);
+				return new Color(0x0000FF);
 			case TravelType.Jump:
+				return new Color(0xFF00FF);
+			case TravelType.Ladder:
 				return new Color(0xFFFF00);
 			case TravelType.WalkOffLedge:
-				return new Color(0xFF0000);
-			case TravelType.WaterJump:
 				return new Color(0x00FFFF);
 			case TravelType.Swim:
-				return new Color(0x0000FF);
+				return new Color(0xFFFFFF);
+
+			case TravelType.WaterJump:
+				return new Color(0xAA0000);
+			case TravelType.Teleport:
+				return new Color(0x00AA00);
+			case TravelType.Elevator:
+				return new Color(0x0000AA);
+			case TravelType.RocketJump:
+				return new Color(0xAA00AA);
+			case TravelType.BfgJump:
+				return new Color(0xAAAA00);
+			case TravelType.GrappleHook:
+				return new Color(0x00AAAA);
+			case TravelType.DoubleJump:
+				return new Color(0xAAAAAA);
+
+			case TravelType.RampJump:
+				return new Color(0x440000);
+			case TravelType.StrafeJump:
+				return new Color(0x004400);
+			case TravelType.JumpPad:
+				return new Color(0x000044);
+			case TravelType.FuncBob:
+				return new Color(0x440044);
 			default:
 				return null;
 		}
 	}
 
-	private getReachabilityGraph(): LineSegments {
+	private getReachabilityGraph(): LineSegments[] {
+		let types = _.range(TravelType.Walk, TravelType.FuncBob + 1);
+		return types
+			.map((val, i, a) => this.getReachabilityGraphForType(val), this)
+			.filter((val, i, a) => val != null)
+			.map((val, i, a) => val!);
+	}
+
+	private getReachabilityGraphForType(type: TravelType): LineSegments | null {
 		var t0 = performance.now();
 		let vertices: number[] = [];
 		let colors: number[] = [];
 
 		const areas = this.file.areaSettings;
 		const reach = this.file.reachabilities;
+		const color = this.getColorFor(type);
+		if (color == null) return null;
+
 		for (let areaId = 1; areaId < areas.length; areaId++) {
 			const first = areas[areaId].firstReachable;
 			const count = areas[areaId].numReachable;
 			if (count <= 0) continue;
 			let items = reach.slice(first, first + count);
 			for (let r of items) {
-				const color = this.getColorFor(r.travelType);
-				if (color == null) continue;
+				if (r.travelType != type) continue;
 
 				const v = [r.start.x, r.start.y, r.start.z, r.end.x, r.end.y, r.end.z];
 				const c = [color.r, color.g, color.b];
@@ -190,6 +197,7 @@ export class AASRender {
 				colors.push.apply(colors, c);
 			}
 		}
+		if (vertices.length <= 0) return null;
 
 		const data = new Float32Array(vertices);
 		const colorData = new Float32Array(colors);
@@ -198,9 +206,10 @@ export class AASRender {
 		geo.setAttribute('color', new BufferAttribute(colorData, 3));
 		const mat = new LineDashedMaterial({ vertexColors: true });
 		const mesh = new LineSegments(geo, mat);
+		mesh.name = "Travel_" + TravelType[type];
 
 		var t1 = performance.now();
-		console.log("getReachabilityGraph(): " + (t1 - t0) + " ms");
+		console.log("getReachabilityGraph(" + TravelType[type] + "): " + (t1 - t0) + " ms");
 		return mesh;
 	}
 
