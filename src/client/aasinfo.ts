@@ -1,19 +1,22 @@
 import AASFile from "./aasfile";
-import { AreaContents, AreaFlags, Face, FaceFlags, Reachability, TravelType } from "./aastypes";
+import { Area, AreaContents, AreaFlags, Face, FaceFlags, Reachability, TravelType } from "./aastypes";
 import * as _ from 'lodash';
 
 export class AASInfo {
 	public readonly file: AASFile;
+	public readonly clusterCount: number;
 
 	public groundFaceIds: number[] = [];
 	public waterFaceIds: number[] = [];
 	public slimeFaceIds: number[] = [];
 	public lavaFaceIds: number[] = [];
+	public clusterPortalFaceIds: number[] = [];
 
 	constructor(f: AASFile) {
 		var t0 = performance.now();
 		this.file = f;
 		this.load();
+		this.clusterCount = new Set(f.areaSettings.map((val, i, a) => val.cluster)).size;
 		var t1 = performance.now();
 		console.log("AAS geometry loaded in " + (t1 - t0) + " ms");
 	}
@@ -210,8 +213,19 @@ export class AASInfo {
 		return result;
 	}
 
+	private addClusterPortal(areaId: number) {
+		const faceIds = [...this.getAreaFaces(areaId).keys()];
+		const a = this.clusterPortalFaceIds;
+		a.push.apply(a, faceIds);
+	}
+
 	private load() {
 		const f = this.file;
+		for (let portalId = 1; portalId < f.portals.length; portalId++) {
+			const portal = f.portals[portalId];
+			this.addClusterPortal(portal.areaNum);
+		}
+
 		for (let areaId = 1; areaId < f.areas.length; areaId++) {
 			const area = f.areas[areaId];
 			const settings = f.areaSettings[areaId];

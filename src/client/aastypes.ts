@@ -87,6 +87,13 @@ export interface Node {
 	children: [number, number]
 };
 
+export interface AreaPortal {
+	areaNum: number, // actual portal area number
+	frontCluster: number,
+	backCluster: number,
+	clusterAreaNum: [front: number, back: number]
+};
+
 export enum TravelType {
 	Invalid = 1,		//temporary not possible
 	Walk = 2,		//walking

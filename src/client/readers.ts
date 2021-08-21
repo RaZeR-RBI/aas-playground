@@ -6,7 +6,8 @@ import {
 	Area,
 	AreaSettings,
 	Node,
-	Reachability
+	Reachability,
+	AreaPortal
 } from './aastypes';
 
 export function readInt32(v: DataView, byteOffset: number): number {
@@ -91,5 +92,17 @@ export function readReachability(v: DataView, byteOffset: number): Reachability 
 		end: readVector3(v, byteOffset + 24),
 		travelType: v.getInt32(byteOffset + 36, true),
 		travelTime: v.getInt16(byteOffset + 40, true)
+	}
+}
+
+export function readPortal(v: DataView, byteOffset: number): AreaPortal {
+	return {
+		areaNum: v.getInt32(byteOffset, true),
+		frontCluster: v.getInt32(byteOffset + 4, true),
+		backCluster: v.getInt32(byteOffset + 8, true),
+		clusterAreaNum: [
+			v.getInt32(byteOffset + 12, true),
+			v.getInt32(byteOffset + 16, true)
+		]
 	}
 }

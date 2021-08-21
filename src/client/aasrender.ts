@@ -27,6 +27,8 @@ export class AASRender {
 
 	private readonly groundFaces: Mesh;
 	private readonly groundEdges: LineSegments;
+	private readonly portalFaces: Mesh;
+	private readonly portalEdges: LineSegments;
 	private readonly reachabilities: LineSegments[];
 
 	private readonly waterFaces: Mesh;
@@ -40,6 +42,10 @@ export class AASRender {
 		const groundMat = new MeshLambertMaterial({ color: 0x333333, side: DoubleSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 });
 		this.groundFaces = this.getMesh(i.groundFaceIds, groundMat, "Ground");
 		this.groundEdges = this.getEdges(i.groundFaceIds, 0x0, "Ground_Edges");
+
+		const portalMat = new MeshBasicMaterial({ color: 0xFF00FF, depthWrite: false, opacity: 0.33, transparent: true });
+		this.portalFaces = this.getMesh(i.clusterPortalFaceIds, portalMat, "ClusterPortal");
+		this.portalEdges = this.getEdges(i.clusterPortalFaceIds, 0xFF00FF, "ClusterPortal_Edges");
 
 		const waterMat = new MeshBasicMaterial({ color: 0x0000CC, depthWrite: false, opacity: 0.2, transparent: true });
 		this.waterFaces = this.getMesh(i.waterFaceIds, waterMat, "Water");
@@ -59,6 +65,8 @@ export class AASRender {
 		const items: Object3D[] = [
 			this.groundFaces,
 			this.groundEdges,
+			this.portalFaces,
+			this.portalEdges,
 			this.waterFaces,
 			this.slimeFaces,
 			this.lavaFaces,

@@ -26,7 +26,8 @@ import {
 	readInt32,
 	readAreaSettings,
 	readNode,
-	readReachability
+	readReachability,
+	readPortal
 } from "./readers";
 
 import {
@@ -38,6 +39,7 @@ import {
 	AreaSettings,
 	Node,
 	Reachability,
+	AreaPortal,
 } from "./aastypes";
 
 interface LumpInfo {
@@ -76,6 +78,7 @@ export default class AASFile {
 	public areaSettings: AreaSettings[] = [];
 	public nodes: Node[] = [];
 	public reachabilities: Reachability[] = [];
+	public portals: AreaPortal[] = [];
 
 	private lumpInfo: LumpInfo[] = [];
 
@@ -103,6 +106,7 @@ export default class AASFile {
 		this.areaSettings = this.readLump(Lumps.AreaSettings, b, 28, readAreaSettings);
 		this.nodes = this.readLump(Lumps.Nodes, b, 12, readNode);
 		this.reachabilities = this.readLump(Lumps.Reachability, b, 44, readReachability);
+		this.portals = this.readLump(Lumps.Portals, b, 20, readPortal);
 		var t1 = performance.now();
 		console.log("AAS file loading took " + (t1 - t0) + " ms");
 	}
