@@ -32,6 +32,12 @@ function onFileLoad(e: any) {
             if (!child.name) continue;
             const folder = gui.addFolder(child.name);
             folder.add(child, 'visible');
+            const color = (<any>child).material.color;
+            if (!!color) {
+                folder.add(color, "r", 0, 1);
+                folder.add(color, "g", 0, 1);
+                folder.add(color, "b", 0, 1);
+            }
             folder.open();
         }
         (<any>window).GUI = gui;

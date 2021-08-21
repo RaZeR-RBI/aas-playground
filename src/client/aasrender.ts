@@ -18,8 +18,9 @@ import {
 import AASFile from "./aasfile";
 import AASInfo from "./aasinfo";
 import * as earcut from 'earcut';
-import { TravelType } from './aastypes';
+import { TravelType, Vector3 } from './aastypes';
 import _ = require('lodash');
+import THREE = require('three');
 
 export class AASRender {
 	public readonly info: AASInfo;
@@ -164,6 +165,39 @@ export class AASRender {
 		}
 	}
 
+	private getColoredArrow(start: Vector3, end: Vector3, color: Color): [vertices: number[], colors: number[]] {
+		const p1 = new THREE.Vector3(start.x, start.y, start.z);
+		const p2 = new THREE.Vector3(end.x, end.y, end.z);
+		if (p1.distanceToSquared(p2) < 1) return [[], []];
+		const fwd = p2.clone().sub(p1).normalize();
+		const upAxis = fwd.y > 0.99 ? new THREE.Vector3(-1, 0, 0) :
+			(fwd.y < -0.99 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0));
+		const right = fwd.clone().cross(upAxis);
+		const up = right.clone().cross(fwd);
+
+		let v: number[] = [];
+		let colorV = [color.r, color.g, color.b, color.r, color.g, color.b];
+		let c: number[] = [];
+		// add line
+		v.push.apply(v, [p1.x, p1.y, p1.z, p2.x, p2.y, p2.z]);
+		c.push.apply(c, colorV);
+
+		const arrowSize = Math.min(p1.distanceTo(p2) * 0.5, 2);
+		// add tip
+		const back = fwd.clone().multiplyScalar(-1);
+		const tipEnds = [
+			p2.clone().addScaledVector(back.clone().add(up.clone()), arrowSize),
+			p2.clone().addScaledVector(back.clone().sub(up.clone()), arrowSize),
+			p2.clone().addScaledVector(back.clone().add(right.clone()), arrowSize),
+			p2.clone().addScaledVector(back.clone().sub(right.clone()), arrowSize),
+		]
+		for (let tip of tipEnds) {
+			v.push.apply(v, [p2.x, p2.y, p2.z, tip.x, tip.y, tip.z]);
+			c.push.apply(c, colorV);
+		}
+		return [v, c];
+	}
+
 	private getReachabilityGraph(): LineSegments[] {
 		let types = _.range(TravelType.Walk, TravelType.FuncBob + 1);
 		return types
@@ -175,7 +209,6 @@ export class AASRender {
 	private getReachabilityGraphForType(type: TravelType): LineSegments | null {
 		var t0 = performance.now();
 		let vertices: number[] = [];
-		let colors: number[] = [];
 
 		const areas = this.file.areaSettings;
 		const reach = this.file.reachabilities;
@@ -189,22 +222,16 @@ export class AASRender {
 			let items = reach.slice(first, first + count);
 			for (let r of items) {
 				if (r.travelType != type) continue;
-
-				const v = [r.start.x, r.start.y, r.start.z, r.end.x, r.end.y, r.end.z];
-				const c = [color.r, color.g, color.b];
+				let [v, c] = this.getColoredArrow(r.start, r.end, color);
 				vertices.push.apply(vertices, v);
-				colors.push.apply(colors, c);
-				colors.push.apply(colors, c);
 			}
 		}
 		if (vertices.length <= 0) return null;
 
 		const data = new Float32Array(vertices);
-		const colorData = new Float32Array(colors);
 		const geo = new BufferGeometry();
 		geo.setAttribute('position', new BufferAttribute(data, 3));
-		geo.setAttribute('color', new BufferAttribute(colorData, 3));
-		const mat = new LineDashedMaterial({ vertexColors: true });
+		const mat = new LineDashedMaterial({ color });
 		const mesh = new LineSegments(geo, mat);
 		mesh.name = "Travel_" + TravelType[type];
 
