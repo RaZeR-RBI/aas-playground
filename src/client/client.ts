@@ -12,6 +12,12 @@ const scene = new THREE.Scene();
 const fileInput = document.getElementById("file") as HTMLInputElement;
 fileInput.addEventListener("change", onFileLoad);
 
+window.addEventListener("load", (_) => {
+    const e = document.createEvent("UIEvents");
+    e.initEvent("change", true, true);
+    fileInput.dispatchEvent(e);
+});
+
 function onFileLoad(e: any) {
     const files: FileList = e.target.files;
     if (files.length != 1) return;
