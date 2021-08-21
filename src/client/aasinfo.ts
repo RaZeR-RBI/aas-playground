@@ -246,7 +246,7 @@ export class AASInfo {
 			const flags = settings.flags;
 			const modelNum = (contents >> 24) & 0xFF
 			// worldspawn only
-			if (modelNum != 0) continue;
+			// if (modelNum != 0) continue;
 			// we are hydrophobic
 			if (flags & AreaFlags.Liquid) {
 				this.liquidAreas.push(areaId);

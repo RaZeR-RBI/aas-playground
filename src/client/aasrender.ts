@@ -12,11 +12,13 @@ import {
 	EdgesGeometry,
 	LineSegments,
 	Object3D,
-	NormalBlending
+	NormalBlending,
+	Color
 } from 'three';
 import AASFile from "./aasfile";
 import AASInfo from "./aasinfo";
 import * as earcut from 'earcut';
+import { TravelType } from './aastypes';
 
 export class AASRender {
 	public readonly info: AASInfo;
@@ -31,6 +33,8 @@ export class AASRender {
 	private readonly reachFallEdges: LineSegments;
 	private readonly reachStep: Mesh;
 	private readonly reachStepEdges: LineSegments;
+
+	private readonly reachabilities: LineSegments;
 
 	constructor(i: AASInfo) {
 		const t0 = performance.now();
@@ -56,6 +60,8 @@ export class AASRender {
 		this.reachStep = this.getMesh(i.reachStepFaceIds, reachStepMat, "reachStep");
 		this.reachStepEdges = this.getEdges(i.reachStepFaceIds, '#0000FF', "reachStepEdges");
 
+		this.reachabilities = this.getReachabilityGraph();
+
 		for (let obj of this.invisibleOnLoad)
 			obj.visible = false;
 
@@ -67,6 +73,12 @@ export class AASRender {
 		return [
 			this.portalFaces,
 			// this.portalEdges,
+			this.reachWalk,
+			this.reachWalkEdges,
+			this.reachFall,
+			this.reachFallEdges,
+			this.reachStep,
+			this.reachStepEdges,
 		];
 	}
 
@@ -75,12 +87,7 @@ export class AASRender {
 		const items: Object3D[] = [
 			this.groundFaces,
 			this.groundEdges,
-			this.reachWalk,
-			this.reachWalkEdges,
-			this.reachFall,
-			this.reachFallEdges,
-			this.reachStep,
-			this.reachStepEdges,
+			this.reachabilities,
 			...this.invisibleOnLoad
 		];
 		for (let m of items)
@@ -136,6 +143,64 @@ export class AASRender {
 		mesh.name = name ?? "";
 		var t1 = performance.now();
 		console.log("getEdges(" + mesh.name + "): " + (t1 - t0) + " ms");
+		return mesh;
+	}
+
+	private getColorFor(r: TravelType): Color | null {
+		switch (r) {
+			case TravelType.Walk:
+				return new Color(0x00FF00);
+			case TravelType.Crouch:
+				return new Color(0x00AA00);
+			case TravelType.BarrierJump:
+				return new Color(0xFF00FF);
+			case TravelType.Jump:
+				return new Color(0xFFFF00);
+			case TravelType.WalkOffLedge:
+				return new Color(0xFF0000);
+			case TravelType.WaterJump:
+				return new Color(0x00FFFF);
+			case TravelType.Swim:
+				return new Color(0x0000FF);
+			default:
+				return null;
+		}
+	}
+
+	private getReachabilityGraph(): LineSegments {
+		var t0 = performance.now();
+		let vertices: number[] = [];
+		let colors: number[] = [];
+
+		const areas = this.file.areaSettings;
+		const reach = this.file.reachabilities;
+		for (let areaId = 1; areaId < areas.length; areaId++) {
+			const first = areas[areaId].firstReachable;
+			const count = areas[areaId].numReachable;
+			if (count <= 0) continue;
+			let items = reach.slice(first, first + count);
+			for (let r of items) {
+				const color = this.getColorFor(r.travelType);
+				if (color == null) continue;
+
+				const v = [r.start.x, r.start.y, r.start.z, r.end.x, r.end.y, r.end.z];
+				const c = [color.r, color.g, color.b];
+				vertices.push.apply(vertices, v);
+				colors.push.apply(colors, c);
+				colors.push.apply(colors, c);
+			}
+		}
+
+		const data = new Float32Array(vertices);
+		const colorData = new Float32Array(colors);
+		const geo = new BufferGeometry();
+		geo.setAttribute('position', new BufferAttribute(data, 3));
+		geo.setAttribute('color', new BufferAttribute(colorData, 3));
+		const mat = new LineDashedMaterial({ vertexColors: true });
+		const mesh = new LineSegments(geo, mat);
+
+		var t1 = performance.now();
+		console.log("getReachabilityGraph(): " + (t1 - t0) + " ms");
 		return mesh;
 	}
 

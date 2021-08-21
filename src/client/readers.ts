@@ -5,7 +5,8 @@ import {
 	Face,
 	Area,
 	AreaSettings,
-	Node
+	Node,
+	Reachability
 } from './aastypes';
 
 export function readInt32(v: DataView, byteOffset: number): number {
@@ -78,5 +79,17 @@ export function readNode(v: DataView, byteOffset: number): Node {
 			v.getInt32(byteOffset + 4, true),
 			v.getInt32(byteOffset + 8, true),
 		]
+	}
+}
+
+export function readReachability(v: DataView, byteOffset: number): Reachability {
+	return {
+		areaNum: v.getInt32(byteOffset, true),
+		faceNum: v.getInt32(byteOffset + 4, true),
+		edgeNum: v.getInt32(byteOffset + 8, true),
+		start: readVector3(v, byteOffset + 12),
+		end: readVector3(v, byteOffset + 24),
+		travelType: v.getInt32(byteOffset + 36, true),
+		travelTime: v.getInt16(byteOffset + 40, true)
 	}
 }

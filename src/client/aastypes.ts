@@ -86,3 +86,36 @@ export interface Node {
 	planeNum: number,
 	children: [number, number]
 };
+
+export enum TravelType {
+	Invalid = 1,		//temporary not possible
+	Walk = 2,		//walking
+	Crouch = 3,		//crouching
+	BarrierJump = 4,	//jumping onto a barrier
+	Jump = 5,		//jumping
+	Ladder = 6,		//climbing a ladder
+	WalkOffLedge = 7,	//walking of a ledge
+	Swim = 8,		//swimming
+	WaterJump = 9,		//jump out of the water
+	Teleport = 10,		//teleportation
+	Elevator = 11,		//travel by elevator
+	RocketJump = 12,	//rocket jumping required for travel
+	BfgJump = 13,		//bfg jumping required for travel
+	GrappleHook = 14,	//grappling hook required for travel
+	DoubleJump = 15,	//double jump
+	RampJump = 16,		//ramp jump
+	StrafeJump = 17,	//strafe jump
+	JumpPad = 18,		//jump pad
+	FuncBob = 19,		//func bob
+	MaxTravelTypes = 32,
+};
+
+export interface Reachability {
+	areaNum: number,
+	faceNum: number,
+	edgeNum: number,
+	start: Vector3,
+	end: Vector3,
+	travelType: TravelType,
+	travelTime: number
+};
