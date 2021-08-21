@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { Vector3 } from 'three';
+import { Color, Material, Vector3 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import AASFile from './aasfile';
 import AASInfo from './aasinfo';
@@ -32,11 +32,29 @@ function onFileLoad(e: any) {
             if (!child.name) continue;
             const folder = gui.addFolder(child.name);
             folder.add(child, 'visible');
-            const color = (<any>child).material.color;
-            if (!!color) {
-                folder.add(color, "r", 0, 1);
-                folder.add(color, "g", 0, 1);
-                folder.add(color, "b", 0, 1);
+            const mat = (<any>child).material;
+            if (!!mat) {
+                const color: Color = mat.color;
+                if (!!color) {
+                    let p = {
+                        color: {
+                            r: color.r * 255,
+                            g: color.g * 255,
+                            b: color.b * 255,
+                        }
+                    };
+                    folder
+                        .addColor(p, "color")
+                        .onChange(v => {
+                            if (typeof (v) == 'object')
+                                mat.color = new Color(v.r / 255, v.g / 255, v.b / 255);
+                            else if (typeof (v) == 'string')
+                                mat.color = new Color(v);
+                        });
+                }
+                if (mat.transparent) {
+                    folder.add(mat, "opacity", 0, 1);
+                }
             }
             folder.open();
         }

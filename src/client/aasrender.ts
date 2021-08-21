@@ -38,15 +38,15 @@ export class AASRender {
 
 		this.info = i;
 		const groundMat = new MeshLambertMaterial({ color: 0x333333, side: DoubleSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 });
-		this.groundFaces = this.getMesh(i.groundFaceIds, groundMat, "groundFaces");
-		this.groundEdges = this.getEdges(i.groundFaceIds, 0x0, "groundLines");
+		this.groundFaces = this.getMesh(i.groundFaceIds, groundMat, "Ground");
+		this.groundEdges = this.getEdges(i.groundFaceIds, 0x0, "Ground_Edges");
 
 		const waterMat = new MeshBasicMaterial({ color: 0x0000CC, depthWrite: false, opacity: 0.2, transparent: true });
-		this.waterFaces = this.getMesh(i.waterFaceIds, waterMat, "waterFaces");
+		this.waterFaces = this.getMesh(i.waterFaceIds, waterMat, "Water");
 		const slimeMat = new MeshBasicMaterial({ color: 0x008822, depthWrite: false, opacity: 0.2, transparent: true });
-		this.slimeFaces = this.getMesh(i.slimeFaceIds, slimeMat, "slimeFaces");
+		this.slimeFaces = this.getMesh(i.slimeFaceIds, slimeMat, "Slime");
 		const lavaMat = new MeshBasicMaterial({ color: 0xFF2200, depthWrite: false, opacity: 0.2, transparent: true });
-		this.lavaFaces = this.getMesh(i.lavaFaceIds, lavaMat, "lavaFaces");
+		this.lavaFaces = this.getMesh(i.lavaFaceIds, lavaMat, "Lava");
 
 		this.reachabilities = this.getReachabilityGraph();
 
@@ -123,30 +123,30 @@ export class AASRender {
 	private getColorFor(r: TravelType): Color | null {
 		switch (r) {
 			case TravelType.Walk:
-				return new Color(0xFF0000);
-			case TravelType.Crouch:
 				return new Color(0x00FF00);
+			case TravelType.Crouch:
+				return new Color(0x00AA00);
 			case TravelType.BarrierJump:
-				return new Color(0x0000FF);
+				return new Color(0xAAAA00);
 			case TravelType.Jump:
-				return new Color(0xFF00FF);
-			case TravelType.Ladder:
 				return new Color(0xFFFF00);
+			case TravelType.Ladder:
+				return new Color(0xFFAA00);
 			case TravelType.WalkOffLedge:
-				return new Color(0x00FFFF);
+				return new Color(0xFF0000);
 			case TravelType.Swim:
-				return new Color(0xFFFFFF);
+				return new Color(0x0000FF);
 
 			case TravelType.WaterJump:
-				return new Color(0xAA0000);
+				return new Color(0xAAAAFF);
 			case TravelType.Teleport:
-				return new Color(0x00AA00);
+				return new Color(0xAA00FF);
 			case TravelType.Elevator:
-				return new Color(0x0000AA);
+				return new Color(0x44AA00);
 			case TravelType.RocketJump:
 				return new Color(0xAA00AA);
 			case TravelType.BfgJump:
-				return new Color(0xAAAA00);
+				return new Color(0xAA00AA);
 			case TravelType.GrappleHook:
 				return new Color(0x00AAAA);
 			case TravelType.DoubleJump:
