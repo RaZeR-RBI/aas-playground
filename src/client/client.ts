@@ -67,9 +67,10 @@ function onFileLoad(e: any) {
         (<any>window).GUI = gui;
 
         const bounds: THREE.Box3 = (<any>scene.children[1]).geometry.boundingBox;
-        const center = bounds.min.lerp(bounds.max, 0.5);
-        camera.lookAt(center);
+        const center = new THREE.Vector3();
+        bounds.getCenter(center);
         camera.position.set(bounds.max.x, bounds.max.y, bounds.max.z);
+        camera.lookAt(center);
         controls.update();
     };
     reader.readAsArrayBuffer(file);

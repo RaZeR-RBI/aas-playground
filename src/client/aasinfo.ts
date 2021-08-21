@@ -1,5 +1,5 @@
 import AASFile from "./aasfile";
-import { Area, AreaContents, AreaFlags, Face, FaceFlags, Reachability, TravelType } from "./aastypes";
+import { Area, AreaContents, AreaFlags, AreaPortal, Face, FaceFlags, Reachability, TravelType } from "./aastypes";
 import * as _ from 'lodash';
 
 export class AASInfo {
@@ -11,6 +11,7 @@ export class AASInfo {
 	public slimeFaceIds: number[] = [];
 	public lavaFaceIds: number[] = [];
 	public clusterPortalFaceIds: number[] = [];
+	public walkableClusterPortalFaceIds: number[] = [];
 
 	constructor(f: AASFile) {
 		var t0 = performance.now();
@@ -45,13 +46,6 @@ export class AASInfo {
 
 	private isGround(face: Face): boolean {
 		return (face.flags & FaceFlags.Ground) != 0;
-	}
-
-	private isPortal(face: Face): boolean {
-		if (face.frontArea < 1 || face.backArea < 1) return false;
-		const f = this.file;
-		const flags = f.areaSettings[face.frontArea].flags | f.areaSettings[face.backArea].flags;
-		return !!(flags & AreaFlags.Grounded) && !(flags & AreaFlags.Liquid);
 	}
 
 	getFaceVertices(faceId: number): [number, number, number][] {
@@ -110,99 +104,6 @@ export class AASInfo {
 			.map((i, _, __) => indexes[i]);
 	}
 
-	private hasCommonEdge(face: Face, edgelist: number[]): boolean {
-		const src = this.getFaceEdgeIds(face).map(Math.abs);
-		const dst = edgelist.map(Math.abs);
-		return _.intersection(src, dst).length > 0;
-	}
-
-	private getLowestEdge(edgelist: number[]): { id: number, height: number } | null {
-		const f = this.file;
-		let min = Number.MAX_VALUE;
-		let minId: number | null = null;
-		for (let i of edgelist) {
-			const e = f.edges[Math.abs(i)];
-			let [v1, v2] = [f.vertexes[e.v1], f.vertexes[e.v2]];
-			const upper = Math.max(v1.y, v2.y);
-			if (upper < min) {
-				minId = i;
-				min = upper;
-			}
-		}
-
-		if (minId) {
-			return { id: minId, height: min };
-		} else return null;
-	}
-
-	private _lastTouchingFace: Face | null = null;
-	private _lastTouchingFaceResult: [front: Map<number, Face>, back: Map<number, Face>] | null = null;
-
-	private getTouchingFaces(portal: Face): [front: Map<number, Face>, back: Map<number, Face>] {
-		if (_.isEqual(this._lastTouchingFace, portal)) {
-			return this._lastTouchingFaceResult!;
-		}
-		const f = this.file;
-		const edges = this.getFaceEdgeIds(portal);
-		let front = this.getAreaFaces(portal.frontArea);
-		let back = this.getAreaFaces(portal.backArea);
-		const _f = [...front.keys()];
-		const _b = [...back.keys()];
-		for (let key of _f)
-			if (!this.hasCommonEdge(front.get(key)!, edges))
-				front.delete(key);
-		for (let key of _b)
-			if (!this.hasCommonEdge(back.get(key)!, edges))
-				back.delete(key);
-
-		this._lastTouchingFace = portal;
-		this._lastTouchingFaceResult = [front, back];
-		return this._lastTouchingFaceResult;
-	}
-
-	private hasReachWalk(face: Face): boolean {
-		if (!this.isPortal(face)) return false;
-		let [front, back] = this.getTouchingFaces(face);
-		const hasFront = [...front.values()].some(this.isGround);
-		const hasBack = [...back.values()].some(this.isGround);
-		return hasFront && hasBack;
-	}
-
-	private hasReachFall(face: Face): boolean {
-		if (!this.isPortal(face)) return false;
-		let [front, back] = this.getTouchingFaces(face);
-		const hasFront = [...front.values()].some(this.isGround);
-		const hasBack = [...back.values()].some(this.isGround);
-		return hasFront && !hasBack;
-	}
-
-	private hasReachStep(face: Face): boolean {
-		if (face.flags != 0 || face.frontArea == 0 || face.backArea == 0)
-			return false;
-		const [front, back] = this.getTouchingFaces(face);
-		const hasFront = [...front.values()].some(this.isGround);
-		const hasBack = [...back.values()].some(this.isGround);
-		const possible = !hasFront && hasBack;
-		if (!possible) return false;
-
-		const portalEdges = this.getFaceEdgeIds(face);
-		const crease = this.getLowestEdge(portalEdges);
-		if (!crease) return false;
-
-		const lower = [...this.getAreaFaces(face.frontArea).values()];
-		if (!lower.length) return false;
-		for (let f of lower) {
-			const fold = this.getLowestEdge(this.getFaceEdgeIds(f));
-			if (!fold) continue;
-			if (crease.height - fold.height > 18) continue; // MAX_STEPSIZE
-			// check if we have flooring
-			const floor = lower.filter((f, i, a) => this.isGround(f) && this.hasCommonEdge(f, [fold.id]), this);
-			if (!floor.length) continue;
-			return true;
-		}
-		return false;
-	}
-
 	private flipIfNeeded(id: number, face: Face): Face {
 		if (id > 0) return face;
 		let result = { ...face };
@@ -213,35 +114,36 @@ export class AASInfo {
 		return result;
 	}
 
-	private addClusterPortal(areaId: number) {
-		const faceIds = [...this.getAreaFaces(areaId).keys()];
+	private addClusterPortal(portal: AreaPortal) {
+		const faceMap = this.getAreaFaces(portal.areaNum);
+		const faceIds = [...faceMap.keys()];
+		const faces = [...faceMap.values()];
+
 		const a = this.clusterPortalFaceIds;
 		a.push.apply(a, faceIds);
+
+		if (faces.some((val, i, a) => this.isGround(val), this)) {
+			const a = this.walkableClusterPortalFaceIds;
+			a.push.apply(a, faceIds);
+		}
 	}
 
 	private load() {
 		const f = this.file;
 		for (let portalId = 1; portalId < f.portals.length; portalId++) {
 			const portal = f.portals[portalId];
-			this.addClusterPortal(portal.areaNum);
+			this.addClusterPortal(portal);
 		}
-
+		// area 0 is a dummy, skip it
 		for (let areaId = 1; areaId < f.areas.length; areaId++) {
-			const area = f.areas[areaId];
 			const settings = f.areaSettings[areaId];
 			const contents = settings.contents;
-			const flags = settings.flags;
 			const modelNum = (contents >> 24) & 0xFF
 			// worldspawn only
 			// if (modelNum != 0) continue;
 			const faces = this.getAreaFaces(areaId);
 			for (let [faceId, _face] of faces) {
 				let face = this.flipIfNeeded(faceId, _face);
-				const connect = {
-					frontArea: face.frontArea,
-					backArea: face.backArea,
-					faceId: faceId
-				};
 				if (this.hasLiquidOnAnySide(face) && face.frontArea > 0 && face.backArea > 0) {
 					const contents =
 						f.areaSettings[face.frontArea].contents |
