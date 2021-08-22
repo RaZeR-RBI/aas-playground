@@ -16,7 +16,7 @@ Quake 3 bot AI and pathfinding in the
 [original paper](https://www.researchgate.net/publication/240430519_The_Quake_III_Arena_Bot).
 
 ## Features
-Only version 5 (latest) is supported for now. Version 4 support is planned.
+Versions 5 and 4 are supported.
 
 * Reachability display grouped by type (shown as colored arrows)
 * Ground and liquid face display

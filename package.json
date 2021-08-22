@@ -1,5 +1,5 @@
 {
-  "name": "three.js-typescript-boilerplate",
+  "name": "aas-playground",
   "version": "1.0.0",
   "description": "",
   "scripts": {
@@ -9,8 +9,8 @@
     "start": "node ./dist/server/server.js",
     "publish": "npm run build && mkdir -p docs && cp -r ./dist/client/* ./docs/"
   },
-  "author": "Sean Bradley",
-  "license": "ISC",
+  "author": "Adel Vilkov",
+  "license": "MIT",
   "devDependencies": {
     "@types/dat.gui": "^0.7.7",
     "@types/express": "^4.17.7",

@@ -90,12 +90,12 @@ export default class AASFile {
 			return;
 		}
 		const version = new Uint32Array(b, 4, 1)[0];
-		if (version != 5) {
-			alert("Version " + version + " is not supported, expected 5");
+		if (version != 5 && version != 4) {
+			alert("Version " + version + " is not supported, expected 5 or 4");
 			return;
 		}
 
-		this.lumpInfo = this.getLumpInfo(b);
+		this.lumpInfo = this.getLumpInfo(b, version);
 		this.vertexes = this.readLump(Lumps.Vertexes, b, 12, readVector3);
 		this.planes = this.readLump(Lumps.Planes, b, 20, readPlane);
 		this.edges = this.readLump(Lumps.Edges, b, 8, readEdge);
@@ -136,19 +136,20 @@ export default class AASFile {
 		return result;
 	}
 
-	decodeLumpInfo(b: ArrayBuffer): Uint32Array {
+	decodeLumpInfo(b: ArrayBuffer, version: number): Uint32Array {
 		const lumpCount = Lumps.TOTAL;
 		const sizeInBytes = 4 + lumpCount * 8; // 116
 		const key = this.getKey(sizeInBytes);
 		let data = new Uint8Array(b, 8, sizeInBytes);
-		for (let i = 0; i < sizeInBytes; i++)
-			data[i] = data[i] ^ key[i];
+		if (version == 5)
+			for (let i = 0; i < sizeInBytes; i++)
+				data[i] = data[i] ^ key[i];
 		// skip checksum
 		return new Uint32Array(data.buffer, data.byteOffset + 4, lumpCount * 2);
 	}
 
-	getLumpInfo(b: ArrayBuffer): LumpInfo[] {
-		const info = this.decodeLumpInfo(b);
+	getLumpInfo(b: ArrayBuffer, version: number): LumpInfo[] {
+		const info = this.decodeLumpInfo(b, version);
 		let result = [];
 		for (let i = 0; i < info.length; i += 2)
 			result.push({
