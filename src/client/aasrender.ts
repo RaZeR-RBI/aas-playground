@@ -120,7 +120,16 @@ export class AASRender {
 
 	private getEdges(faceIds: number[], color: number | string, name: string | undefined = undefined): LineSegments {
 		var t0 = performance.now();
-		const vertices = faceIds.map((val, i, a) => this.info.getFaceLineSegments(val), this)
+		const file = this.file;
+		const info = this.info;
+		const edges = [...new Set(faceIds
+			.map((id, i, a) => file.faces[Math.abs(id)])
+			.map((f, i, a) => info.getFaceEdgeIds(f))
+			.reduce((acc, val) => acc.concat(val), [])
+			.map((eid, i, a) => Math.abs(eid))
+		)];
+
+		const vertices = edges.map((e, i, a) => info.getEdgeVertices(e))
 			.reduce((acc, val) => acc.concat(val), (<[number, number, number][]>[]))
 			.reduce((acc, val) => acc.concat([...val]), (<number[]>[]));
 

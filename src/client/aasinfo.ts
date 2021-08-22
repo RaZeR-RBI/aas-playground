@@ -38,10 +38,11 @@ export class AASInfo {
 		return result;
 	}
 
-	private hasLiquidOnAnySide(face: Face): boolean {
+	private hasLiquidOnOneSide(face: Face): boolean {
 		const f = this.file;
-		const flags = f.areaSettings[face.frontArea].flags | f.areaSettings[face.backArea].flags;
-		return (flags & AreaFlags.Liquid) != 0;
+		const front = !!(f.areaSettings[face.frontArea].flags & AreaFlags.Liquid);
+		const back = !!(f.areaSettings[face.backArea].flags & AreaFlags.Liquid);
+		return front !== back;
 	}
 
 	private isGround(face: Face): boolean {
@@ -84,7 +85,7 @@ export class AASInfo {
 		return vertices.reduce((acc, val) => acc.concat(val), []);
 	}
 
-	private getEdgeVertices(edgeId: number): [number, number, number][] {
+	getEdgeVertices(edgeId: number): [number, number, number][] {
 		const flip = edgeId < 0;
 		const edge = this.file.edges[Math.abs(edgeId)];
 		let v1 = this.file.vertexes[edge.v1];
@@ -97,7 +98,7 @@ export class AASInfo {
 		return [[v1.x, v1.y, v1.z], [v2.x, v2.y, v2.z]];
 	}
 
-	private getFaceEdgeIds(face: Face): number[] {
+	getFaceEdgeIds(face: Face): number[] {
 		const indexes = this.file.edgeIndexes;
 		// if edge is < 0 then it's flipped
 		return _.range(face.firstEdge, face.firstEdge + face.numEdges)
@@ -144,7 +145,7 @@ export class AASInfo {
 			const faces = this.getAreaFaces(areaId);
 			for (let [faceId, _face] of faces) {
 				let face = this.flipIfNeeded(faceId, _face);
-				if (this.hasLiquidOnAnySide(face) && face.frontArea > 0 && face.backArea > 0) {
+				if (this.hasLiquidOnOneSide(face) && face.frontArea > 0 && face.backArea > 0) {
 					const contents =
 						f.areaSettings[face.frontArea].contents |
 						f.areaSettings[face.backArea].contents;
