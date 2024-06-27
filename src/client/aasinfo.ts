@@ -10,6 +10,7 @@ export class AASInfo {
 	public waterFaceIds: number[] = [];
 	public slimeFaceIds: number[] = [];
 	public lavaFaceIds: number[] = [];
+	public doNotEnterFaceIds: number[] = [];
 	public clusterPortalFaceIds: number[] = [];
 	public walkableClusterPortalFaceIds: number[] = [];
 
@@ -157,7 +158,12 @@ export class AASInfo {
 						this.waterFaceIds.push(faceId);
 				}
 				else if (this.isGround(face))
-					this.groundFaceIds.push(faceId);
+				{
+					if (contents & AreaContents.DoNotEnter)
+						this.doNotEnterFaceIds.push(faceId);
+					else
+						this.groundFaceIds.push(faceId);
+				}
 			}
 		}
 	}

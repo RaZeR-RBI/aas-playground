@@ -36,6 +36,7 @@ export class AASRender {
 	private readonly waterFaces: Mesh;
 	private readonly slimeFaces: Mesh;
 	private readonly lavaFaces: Mesh;
+	private readonly doNotEnterFaces: Mesh;
 
 	constructor(i: AASInfo) {
 		const t0 = performance.now();
@@ -43,7 +44,7 @@ export class AASRender {
 		this.info = i;
 		const groundMat = new MeshLambertMaterial({ color: 0x333333, side: DoubleSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 });
 		this.groundFaces = this.getMesh(i.groundFaceIds, groundMat, "Ground");
-		this.groundEdges = this.getEdges(i.groundFaceIds, 0x0, "Ground_Edges");
+		this.groundEdges = this.getEdges([...i.groundFaceIds, ...i.doNotEnterFaceIds], 0x0, "Ground_Edges");
 
 		const portalMat = new MeshBasicMaterial({ color: 0xFF00FF, depthWrite: false, opacity: 0.33, transparent: true });
 		this.portalFaces = this.getMesh(i.clusterPortalFaceIds, portalMat, "ClusterPortal");
@@ -59,6 +60,9 @@ export class AASRender {
 		this.slimeFaces = this.getMesh(i.slimeFaceIds, slimeMat, "Slime");
 		const lavaMat = new MeshBasicMaterial({ color: 0xFF2200, depthWrite: false, opacity: 0.2, transparent: true });
 		this.lavaFaces = this.getMesh(i.lavaFaceIds, lavaMat, "Lava");
+
+		const doNotEnterMat = new MeshLambertMaterial({ color: 0x555500, side: DoubleSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 });
+		this.doNotEnterFaces = this.getMesh(i.doNotEnterFaceIds, doNotEnterMat, "DoNotEnter");
 
 		this.reachabilities = this.getReachabilityGraph();
 
@@ -78,6 +82,7 @@ export class AASRender {
 			this.waterFaces,
 			this.slimeFaces,
 			this.lavaFaces,
+			this.doNotEnterFaces,
 			...this.reachabilities
 		];
 		for (let m of items)
